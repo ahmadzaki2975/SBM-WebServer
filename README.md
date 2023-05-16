@@ -1,6 +1,8 @@
 # SBM-WebServer
 
-Code for serving data from an ESP32. Uses web socket for real time communication.
+Code to serve data from an ESP32. 
+
+Uses web socket for real time communication.
 
 Frontend web work in progress.
 
