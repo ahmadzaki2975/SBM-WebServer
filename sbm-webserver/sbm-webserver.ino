@@ -4,7 +4,7 @@
 #include "DHT.h"
 
 #define DHTPIN 13
-#define DHTTYPE DHT22
+#define DHTTYPE DHT11
 DHT dht(DHTPIN, DHTTYPE);
 
 
@@ -53,17 +53,27 @@ void loop() {
     humidity = 0;
   }
 
+  int analogValue = analogRead(32);
+  // Rescale to potentiometer's voltage (from 0V to 3.3V):
+  float voltage = floatMap(analogValue, 0, 4095, 0, 3.3);
+
   String jsonString = "";
   jsonString += "{";
-  jsonString += "\"test\" : 20,";
   jsonString += "\"temperature\" : ";
   jsonString += temp;
   jsonString += ",";
   jsonString += "\"humidity\" : ";
   jsonString += humidity;
+  jsonString += ",";
+  jsonString += "\"analog\":";
+  jsonString += analogValue;
+  jsonString += ",";
+  jsonString += "\"voltage\":";
+  jsonString += voltage;
   jsonString += "}";
 
   ws.textAll(jsonString);
+  Serial.println(jsonString);
   delay(1000);
 }
 
@@ -81,10 +91,9 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
     case WS_EVT_DISCONNECT:
       Serial.printf("WebSocket client #%u disconnected\n", client->id());
       break;
-    case WS_EVT_DATA:
-      // handleWebSocketMessage(arg, data, len);
-      break;
-    case WS_EVT_ERROR:
-      break;
   }
+}
+
+float floatMap(float x, float in_min, float in_max, float out_min, float out_max) {
+  return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
