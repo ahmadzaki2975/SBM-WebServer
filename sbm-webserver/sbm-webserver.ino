@@ -2,22 +2,34 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include "DHT.h"
+#include <Wire.h>
+#include <Adafruit_BMP085.h>
 
+// SSID depends on network used
+const char *ssid = "aufarhmn";
+const char *password = "infopulang";
+
+// DHT Setup
 #define DHTPIN 13
-#define DHTTYPE DHT11
+#define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
-
-
-const char *ssid = "DESKTOP-ZAKI";
-const char *password = "44444444";
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 AsyncWebSocket ws("/ws");
 
+// Barometer Setup
+Adafruit_BMP085 bmp;
+
 void setup() {
   Serial.begin(115200);
   dht.begin();
+  
+  // Catch error if BMP085 is not connected
+  if (!bmp.begin()) {
+    Serial.println("Could not find a valid BMP085 sensor, check wiring!");
+    while (1);
+  }
 
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
@@ -41,6 +53,10 @@ void setup() {
 
 void loop() {
   ws.cleanupClients();
+
+  // Barometer readings
+  float pressure = bmp.readPressure();
+  float altitude = bmp.readAltitude();
 
   float temp = dht.readTemperature();
   float humidity = dht.readHumidity();
@@ -70,6 +86,10 @@ void loop() {
   jsonString += ",";
   jsonString += "\"voltage\":";
   jsonString += voltage;
+  jsonString += "\"pressure\":";
+  jsonString += pressure;
+  jsonString += "\"altitude\":";
+  jsonString += altitude;
   jsonString += "}";
 
   ws.textAll(jsonString);
