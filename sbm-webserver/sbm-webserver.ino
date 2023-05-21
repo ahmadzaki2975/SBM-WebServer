@@ -1,3 +1,4 @@
+// Import all library
 #include <WiFi.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
@@ -5,14 +6,14 @@
 #include <Wire.h>
 #include <Adafruit_BMP085.h>
 
-// SSID depends on network used
-const char *ssid = "aufarhmn";
-const char *password = "infopulang";
-
-// DHT Setup
+// DHT 22 Setup
 #define DHTPIN 13
 #define DHTTYPE DHT22
 DHT dht(DHTPIN, DHTTYPE);
+
+// SSID depends on network used
+const char *ssid = "aufarhmn";
+const char *password = "infopulang";
 
 // Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
@@ -24,19 +25,13 @@ Adafruit_BMP085 bmp;
 void setup() {
   Serial.begin(115200);
   dht.begin();
-  
-  // Catch error if BMP085 is not connected
-  if (!bmp.begin()) {
-    Serial.println("Could not find a valid BMP085 sensor, check wiring!");
-    while (1);
-  }
 
+  // WIFI Connection and showing ESP32 IP
   WiFi.begin(ssid, password);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.println("Connecting to WiFi...");
   }
-
   Serial.println(WiFi.localIP());
   DefaultHeaders::Instance().addHeader("Access-Control-Allow-Origin", "*");
   server.begin();
@@ -54,10 +49,11 @@ void setup() {
 void loop() {
   ws.cleanupClients();
 
-  // Barometer readings
+  // Barometer Reading Data
   float pressure = bmp.readPressure();
   float altitude = bmp.readAltitude();
 
+  // DHT 22 Reading Data
   float temp = dht.readTemperature();
   float humidity = dht.readHumidity();
 
@@ -69,10 +65,11 @@ void loop() {
     humidity = 0;
   }
 
+  // Reading potentiometer and rescale to potentiometer's voltage (0V to 3.3V)
   int analogValue = analogRead(32);
-  // Rescale to potentiometer's voltage (from 0V to 3.3V):
   float voltage = floatMap(analogValue, 0, 4095, 0, 3.3);
 
+  // Constructing JSON that sent to frontend
   String jsonString = "";
   jsonString += "{";
   jsonString += "\"temperature\" : ";
@@ -81,29 +78,34 @@ void loop() {
   jsonString += "\"humidity\" : ";
   jsonString += humidity;
   jsonString += ",";
-  jsonString += "\"analog\":";
+  jsonString += "\"analog\" : ";
   jsonString += analogValue;
   jsonString += ",";
-  jsonString += "\"voltage\":";
+  jsonString += "\"voltage\" : ";
   jsonString += voltage;
-  jsonString += "\"pressure\":";
+  jsonString += ",";
+  jsonString += "\"pressure\" : ";
   jsonString += pressure;
-  jsonString += "\"altitude\":";
+  jsonString += ",";
+  jsonString += "\"altitude\" : ";
   jsonString += altitude;
   jsonString += "}";
 
+  // Sending JSON using websocket
   ws.textAll(jsonString);
   Serial.println(jsonString);
   delay(1000);
 }
 
+// Websocket setup
 void initWebSocket() {
   ws.onEvent(onEvent);
   server.addHandler(&ws);
 }
 
+// Check websocket connection from client side
 void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType type,
-             void *arg, uint8_t *data, size_t len) {
+  void *arg, uint8_t *data, size_t len) {
   switch (type) {
     case WS_EVT_CONNECT:
       Serial.printf("WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
@@ -114,6 +116,7 @@ void onEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, AwsEventType 
   }
 }
 
+// Function to rescale potentiometer reading
 float floatMap(float x, float in_min, float in_max, float out_min, float out_max) {
   return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min;
 }
