@@ -4,7 +4,7 @@ Code to serve data from an ESP32.
 
 Uses web socket for real time communication.
 
-Frontend web work in progress.
+Frontend web repository can be accessed [here](https://github.com/ahmadzaki2975/SBM-Frontend).
 
 ## Team Members
 
